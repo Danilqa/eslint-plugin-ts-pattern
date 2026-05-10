@@ -16,9 +16,7 @@ function isStringLiteralUnion(type: ts.Type, checker: ts.TypeChecker): boolean {
   const constituents = type.types
   const literals = constituents.filter((t) => t.isStringLiteral())
   if (literals.length < 2) return false
-  return constituents.every(
-    (t) => t.isStringLiteral() || isNullish(t, checker),
-  )
+  return constituents.every((t) => t.isStringLiteral() || isNullish(t, checker))
 }
 
 function getNonLiteralOperand(
