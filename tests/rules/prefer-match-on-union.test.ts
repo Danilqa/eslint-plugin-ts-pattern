@@ -87,7 +87,7 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
       `,
     },
     {
-      name: 'switch statement — visitor is IfStatement only',
+      name: 'switch statement — neither IfStatement nor ConditionalExpression',
       code: `
         type State = 'failed' | 'success' | 'pending';
         declare const s: State;
@@ -96,14 +96,6 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
           case 'success': break;
           case 'pending': break;
         }
-      `,
-    },
-    {
-      name: 'ternary — visitor is IfStatement only',
-      code: `
-        type State = 'failed' | 'success' | 'pending';
-        declare const s: State;
-        const r = s === 'failed' ? 1 : 0;
       `,
     },
     {
@@ -216,6 +208,33 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
         if (payment?.state === 'failed') {}
       `,
       errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'ternary — ConditionalExpression visitor fires too',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        const r = s === 'failed' ? 1 : 0;
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'ternary with !== and literal on the LEFT',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        const r = 'failed' !== s ? 1 : 0;
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'nested ternary — both ConditionalExpression tests fire',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        const r = s === 'failed' ? 'a' : s === 'success' ? 'b' : 'c';
+      `,
+      errors: [{ messageId: 'preferMatch' }, { messageId: 'preferMatch' }],
     },
   ],
 })

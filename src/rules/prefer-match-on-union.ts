@@ -33,12 +33,12 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
     type: 'suggestion',
     docs: {
       description:
-        "Warn when `if` branches on a string-literal union type. Prefer ts-pattern's `match(...).exhaustive()`.",
+        "Warn when `if` or a ternary branches on a string-literal union type via `===`/`!==`. Prefer ts-pattern's `match(...).exhaustive()`.",
     },
     schema: [],
     messages: {
       preferMatch:
-        'Avoid `if` on string-literal union types. Use `match(value).with(...).exhaustive()` from ts-pattern so missing cases are caught at compile time.',
+        'Avoid `===`/`!==` checks on string-literal union types. Use `match(value).with(...).exhaustive()` from ts-pattern so missing cases are caught at compile time.',
     },
   },
   defaultOptions: [],
@@ -46,21 +46,27 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
     const services = ESLintUtils.getParserServices(context)
     const checker = services.program.getTypeChecker()
 
+    function check(test: TSESTree.Expression) {
+      if (test.type !== 'BinaryExpression') return
+      if (test.operator !== '===' && test.operator !== '!==') return
+
+      const target = getNonLiteralOperand(test)
+      if (!target) return
+
+      const tsNode = services.esTreeNodeToTSNodeMap.get(target)
+      const type = checker.getTypeAtLocation(tsNode)
+
+      if (!isStringLiteralUnion(type)) return
+
+      context.report({ node: test, messageId: 'preferMatch' })
+    }
+
     return {
       IfStatement(node) {
-        const test = node.test
-        if (test.type !== 'BinaryExpression') return
-        if (test.operator !== '===' && test.operator !== '!==') return
-
-        const target = getNonLiteralOperand(test)
-        if (!target) return
-
-        const tsNode = services.esTreeNodeToTSNodeMap.get(target)
-        const type = checker.getTypeAtLocation(tsNode)
-
-        if (!isStringLiteralUnion(type)) return
-
-        context.report({ node: test, messageId: 'preferMatch' })
+        check(node.test)
+      },
+      ConditionalExpression(node) {
+        check(node.test)
       },
     }
   },
