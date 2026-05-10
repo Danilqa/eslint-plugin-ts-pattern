@@ -1,6 +1,6 @@
 # @danilqa/eslint-plugin-ts-pattern
 
-An ESLint plugin that warns when you branch on a string-literal union type with `if`/`else`, and points you at [`ts-pattern`](https://github.com/gvergnaud/ts-pattern)'s exhaustive `match` instead.
+Warns when you branch on a string-literal union type with `if`/`else`, and points you at [`ts-pattern`](https://github.com/gvergnaud/ts-pattern)'s exhaustive `match` instead.
 
 ## Problem
 
@@ -12,12 +12,17 @@ interface Payment {
 }
 
 function describe(payment: Payment) {
+  // Case 1.
+  // When "State" later grows a "refunded" variant, the compiler does not flag this "if". The branch silently misses
+  // the new case — and so does every other `if` block scattered across the codebase.
   if (payment.state === 'failed') return 'a'
-  // …
+
+  // Case 2.
+  // We implicitly convert union to "boolean" type instead of covering all cases now and in the future. Added 'refunded'?
+  // It will be implicitly mached to "b" and we won't notice.
+  return payment.state === 'failed' ? 'a' : 'b'
 }
 ```
-
-When `State` later grows a `'refunded'` variant, the compiler does not flag this `if`. The branch silently misses the new case — and so does every other `if` block scattered across the codebase.
 
 ## Solution
 
@@ -49,7 +54,7 @@ yarn add -D @danilqa/eslint-plugin-ts-pattern
 pnpm add -D @danilqa/eslint-plugin-ts-pattern
 ```
 
-## Usage (flat config)
+## Usage
 
 ```js
 import tsPattern from '@danilqa/eslint-plugin-ts-pattern'
@@ -68,6 +73,24 @@ export default [
 
 ## Rules
 
-| Rule                    | Description                                                              |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `prefer-match-on-union` | Warn on `if (x === 'literal')` when `x` has a string-literal union type. |
+```ts
+type State = 'failed' | 'success' | 'pending'
+let state: State
+```
+
+| Case                                                | Example                               | Fires |
+| --------------------------------------------------- | ------------------------------------- | :---: |
+| String-literal union, `===` with literal            | `if (state === 'failed') {}`          |  ✅   |
+| String-literal union, `!==` with literal            | `if (state !== 'failed') {}`          |  ✅   |
+| Literal on the left side                            | `if ('failed' === state) {}`          |  ✅   |
+| Ternary on a string-literal union                   | `state === 'failed' ? 1 : 0`          |  ✅   |
+| Member access into a union property                 | `if (payment.state === 'failed') {}`  |  ✅   |
+| Optional chain on non-nullable receiver             | `if (payment?.state === 'failed') {}` |  ✅   |
+| Optional / nullable property (`State \| undefined`) | `if (payment.state === 'failed') {}`  |  ✅   |
+| Plain `string` operand                              | `if (s === 'hi') {}`                  |  ❌   |
+| Single-member literal type (`'only'`)               | `if (x === 'only') {}`                |  ❌   |
+| Number- or boolean-literal union (`1 \| 2`)         | `if (n === 1) {}`                     |  ❌   |
+| Mixed-type union (`'a' \| number`)                  | `if (m === 'a') {}`                   |  ❌   |
+| Loose equality (`==` / `!=`)                        | `if (s == 'failed') {}`               |  ❌   |
+| Both operands are non-literal                       | `if (a === b) {}`                     |  ❌   |
+| `switch` statement                                  | `switch (s) { case 'failed': … }`     |  ❌   |

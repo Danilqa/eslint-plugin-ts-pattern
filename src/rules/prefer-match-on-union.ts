@@ -44,7 +44,7 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
     schema: [],
     messages: {
       preferMatch:
-        'Avoid `===`/`!==` checks on string-literal union types. Use `match(value).with(...).exhaustive()` from ts-pattern so missing cases are caught at compile time.',
+        'Avoid `===`/`!==` checks on string-literal union types. Use `match(value).with(...).exhaustive()` from ts-pattern so missing cases are caught at compile time. Use .otherwise() for dynamic backend types. Read more: https://github.com/Danilqa/eslint-plugin-ts-pattern',
     },
   },
   defaultOptions: [],
