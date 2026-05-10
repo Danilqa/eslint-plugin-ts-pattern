@@ -1,8 +1,27 @@
 {
   "name": "@danilqa/eslint-plugin-ts-pattern",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "ESLint plugin: warn when `if` is used on string-literal union types instead of ts-pattern's exhaustive `match`",
   "license": "MIT",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "ts-pattern",
+    "pattern-matching",
+    "pattern-match",
+    "match",
+    "exhaustive",
+    "exhaustiveness",
+    "discriminated-union",
+    "union-types",
+    "string-literal-union",
+    "typescript",
+    "ts",
+    "type-safety",
+    "linter",
+    "lint"
+  ],
   "publishConfig": {
     "access": "public"
   },

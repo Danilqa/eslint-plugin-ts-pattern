@@ -6,11 +6,19 @@ import { createRule } from '../utils/create-rule'
 
 type MessageIds = 'preferMatch'
 
-function isStringLiteralUnion(type: ts.Type): boolean {
+function isNullish(type: ts.Type, checker: ts.TypeChecker): boolean {
+  const printed = checker.typeToString(type)
+  return printed === 'null' || printed === 'undefined'
+}
+
+function isStringLiteralUnion(type: ts.Type, checker: ts.TypeChecker): boolean {
   if (!type.isUnion()) return false
   const constituents = type.types
-  if (constituents.length < 2) return false
-  return constituents.every((t) => t.isStringLiteral())
+  const literals = constituents.filter((t) => t.isStringLiteral())
+  if (literals.length < 2) return false
+  return constituents.every(
+    (t) => t.isStringLiteral() || isNullish(t, checker),
+  )
 }
 
 function getNonLiteralOperand(
@@ -56,7 +64,7 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
       const tsNode = services.esTreeNodeToTSNodeMap.get(target)
       const type = checker.getTypeAtLocation(tsNode)
 
-      if (!isStringLiteralUnion(type)) return
+      if (!isStringLiteralUnion(type, checker)) return
 
       context.report({ node: test, messageId: 'preferMatch' })
     }

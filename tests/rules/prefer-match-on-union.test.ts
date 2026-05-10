@@ -124,12 +124,19 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
       `,
     },
     {
-      name: 'optional chain on nullable receiver — type includes undefined, not pure string union',
+      name: 'single string literal with null — not enough literals to qualify',
       code: `
-        type State = 'failed' | 'success' | 'pending';
-        interface Payment { state: State }
-        declare const payment: Payment | undefined;
-        if (payment?.state === 'failed') {}
+        type T = 'a' | null;
+        declare const t: T;
+        if (t === 'a') {}
+      `,
+    },
+    {
+      name: 'mixed-type union with nullish — non-nullish non-literal disqualifies',
+      code: `
+        type M = 'a' | 'b' | number | null;
+        declare const m: M;
+        if (m === 'a') {}
       `,
     },
   ],
@@ -235,6 +242,36 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
         const r = s === 'failed' ? 'a' : s === 'success' ? 'b' : 'c';
       `,
       errors: [{ messageId: 'preferMatch' }, { messageId: 'preferMatch' }],
+    },
+    {
+      name: 'optional property — type includes undefined alongside string literals',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        interface Payment { state?: State }
+        declare const payment: Payment;
+        if (payment.state === 'failed') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'nullable property — type includes null alongside string literals',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        interface Payment { state: State | null }
+        declare const payment: Payment;
+        if (payment.state === 'failed') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'optional chain on nullable receiver — String | undefined still fires',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        interface Payment { state: State }
+        declare const payment: Payment | undefined;
+        if (payment?.state === 'failed') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
     },
   ],
 })
