@@ -2,7 +2,7 @@ import type { TSESTree } from '@typescript-eslint/utils'
 import { ESLintUtils } from '@typescript-eslint/utils'
 import type * as ts from 'typescript'
 
-import { createRule } from '../utils/create-rule.js'
+import { createRule } from '../utils/create-rule'
 
 type MessageIds = 'preferMatch'
 
