@@ -30,7 +30,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "prepare": "husky"
   },
   "peerDependencies": {
     "eslint": ">=9",
@@ -43,6 +45,7 @@
     "@typescript-eslint/utils": "8.59.2",
     "eslint": "10.3.0",
     "eslint-config-prettier": "10.1.8",
+    "husky": "9.1.7",
     "prettier": "3.8.3",
     "typescript": "6.0.3",
     "typescript-eslint": "8.59.2",
