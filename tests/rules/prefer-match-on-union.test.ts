@@ -1,15 +1,15 @@
-import * as path from 'node:path';
+import * as path from 'node:path'
 
-import * as tsParser from '@typescript-eslint/parser';
-import { RuleTester } from '@typescript-eslint/rule-tester';
-import { afterAll, describe, it } from 'vitest';
+import * as tsParser from '@typescript-eslint/parser'
+import { RuleTester } from '@typescript-eslint/rule-tester'
+import { afterAll, describe, it } from 'vitest'
 
-import { preferMatchOnUnion } from '../../src/rules/prefer-match-on-union.js';
+import { preferMatchOnUnion } from '../../src/rules/prefer-match-on-union.js'
 
-RuleTester.afterAll = afterAll;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
-RuleTester.describe = describe;
+RuleTester.afterAll = afterAll
+RuleTester.it = it
+RuleTester.itOnly = it.only
+RuleTester.describe = describe
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -19,7 +19,7 @@ const ruleTester = new RuleTester({
       tsconfigRootDir: path.join(import.meta.dirname, '..', 'fixtures'),
     },
   },
-});
+})
 
 ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
   valid: [
@@ -57,4 +57,4 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
       errors: [{ messageId: 'preferMatch' }],
     },
   ],
-});
+})

@@ -1,31 +1,30 @@
-import type { TSESTree } from '@typescript-eslint/utils';
-import { ESLintUtils } from '@typescript-eslint/utils';
-import type * as ts from 'typescript';
+import type { TSESTree } from '@typescript-eslint/utils'
+import { ESLintUtils } from '@typescript-eslint/utils'
+import type * as ts from 'typescript'
 
-import { createRule } from '../utils/create-rule.js';
+import { createRule } from '../utils/create-rule.js'
 
-type MessageIds = 'preferMatch';
+type MessageIds = 'preferMatch'
 
 function isStringLiteralUnion(type: ts.Type): boolean {
-  if (!type.isUnion()) return false;
-  const constituents = type.types;
-  if (constituents.length < 2) return false;
-  return constituents.every((t) => t.isStringLiteral());
+  if (!type.isUnion()) return false
+  const constituents = type.types
+  if (constituents.length < 2) return false
+  return constituents.every((t) => t.isStringLiteral())
 }
 
 function getNonLiteralOperand(
   node: TSESTree.BinaryExpression,
 ): TSESTree.Expression | null {
-  const { left, right } = node;
+  const { left, right } = node
+  if (left.type === 'PrivateIdentifier') return null
   const leftIsStringLit =
-    left.type === 'Literal' && typeof left.value === 'string';
+    left.type === 'Literal' && typeof left.value === 'string'
   const rightIsStringLit =
-    right.type === 'Literal' && typeof right.value === 'string';
-  if (leftIsStringLit && !rightIsStringLit) return right;
-  if (rightIsStringLit && !leftIsStringLit) {
-    return left as TSESTree.Expression;
-  }
-  return null;
+    right.type === 'Literal' && typeof right.value === 'string'
+  if (leftIsStringLit && !rightIsStringLit) return right
+  if (rightIsStringLit && !leftIsStringLit) return left
+  return null
 }
 
 export const preferMatchOnUnion = createRule<[], MessageIds>({
@@ -44,25 +43,25 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
   },
   defaultOptions: [],
   create(context) {
-    const services = ESLintUtils.getParserServices(context);
-    const checker = services.program.getTypeChecker();
+    const services = ESLintUtils.getParserServices(context)
+    const checker = services.program.getTypeChecker()
 
     return {
       IfStatement(node) {
-        const test = node.test;
-        if (test.type !== 'BinaryExpression') return;
-        if (test.operator !== '===' && test.operator !== '!==') return;
+        const test = node.test
+        if (test.type !== 'BinaryExpression') return
+        if (test.operator !== '===' && test.operator !== '!==') return
 
-        const target = getNonLiteralOperand(test);
-        if (!target) return;
+        const target = getNonLiteralOperand(test)
+        if (!target) return
 
-        const tsNode = services.esTreeNodeToTSNodeMap.get(target);
-        const type = checker.getTypeAtLocation(tsNode);
+        const tsNode = services.esTreeNodeToTSNodeMap.get(target)
+        const type = checker.getTypeAtLocation(tsNode)
 
-        if (!isStringLiteralUnion(type)) return;
+        if (!isStringLiteralUnion(type)) return
 
-        context.report({ node: test, messageId: 'preferMatch' });
+        context.report({ node: test, messageId: 'preferMatch' })
       },
-    };
+    }
   },
-});
+})

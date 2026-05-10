@@ -5,14 +5,14 @@ An ESLint plugin that warns when you branch on a string-literal union type with 
 ## Problem
 
 ```ts
-type State = 'failed' | 'success' | 'pending';
+type State = 'failed' | 'success' | 'pending'
 
 interface Payment {
-  state: State;
+  state: State
 }
 
 function describe(payment: Payment) {
-  if (payment.state === 'failed') return 'a';
+  if (payment.state === 'failed') return 'a'
   // …
 }
 ```
@@ -22,14 +22,14 @@ When `State` later grows a `'refunded'` variant, the compiler does not flag this
 ## Solution
 
 ```ts
-import { match } from 'ts-pattern';
+import { match } from 'ts-pattern'
 
 function describe(payment: Payment) {
   return match(payment.state)
     .with('failed', () => 'a')
     .with('success', () => 'b')
     .with('pending', () => 'c')
-    .exhaustive();
+    .exhaustive()
 }
 ```
 
@@ -38,7 +38,7 @@ function describe(payment: Payment) {
 ## Install
 
 ```sh
-npm i --dev @danilqa/eslint-plugin-ts-pattern 
+npm i --dev @danilqa/eslint-plugin-ts-pattern
 ```
 
 ```
@@ -52,7 +52,7 @@ pnpm add -D @danilqa/eslint-plugin-ts-pattern
 ## Usage (flat config)
 
 ```js
-import tsPattern from '@danilqa/eslint-plugin-ts-pattern';
+import tsPattern from '@danilqa/eslint-plugin-ts-pattern'
 
 export default [
   {
@@ -63,11 +63,11 @@ export default [
     },
     // ...
   },
-];
+]
 ```
 
 ## Rules
 
-| Rule | Description |
-| --- | --- |
+| Rule                    | Description                                                              |
+| ----------------------- | ------------------------------------------------------------------------ |
 | `prefer-match-on-union` | Warn on `if (x === 'literal')` when `x` has a string-literal union type. |
