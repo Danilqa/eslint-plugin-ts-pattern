@@ -135,7 +135,7 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
   ],
   invalid: [
     {
-      name: 'README example via interface',
+      name: 'union propery from interface',
       code: `
         type State = 'failed' | 'success' | 'pending';
         interface Payment { state: State }
