@@ -139,6 +139,40 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
         if (m === 'a') {}
       `,
     },
+    {
+      name: 'while loop test — loops are iteration, match() does not apply',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        while (s !== 'failed') {}
+      `,
+    },
+    {
+      name: 'do-while loop test — symmetric with while',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        do {} while (s !== 'failed');
+      `,
+    },
+    {
+      name: 'while loop test inside &&  — exclusion walks through LogicalExpression',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        declare const other: boolean;
+        while (s !== 'failed' && other) {}
+      `,
+    },
+    {
+      name: 'non-literal binary in assignment — broad visitor still respects operand filter',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const a: State;
+        declare const b: State;
+        const r = a === b;
+      `,
+    },
   ],
   invalid: [
     {
@@ -270,6 +304,101 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
         interface Payment { state: State }
         declare const payment: Payment | undefined;
         if (payment?.state === 'failed') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'logical AND inside if test — both children inspected',
+      code: `
+        type Currency = 'GBP' | 'USD' | 'EUR';
+        type Tier = 'ZERO' | 'TWO_PERCENT';
+        interface Account { currency: Currency }
+        interface Payrun { tier: Tier }
+        declare const account: Account;
+        declare const payrun: Payrun;
+        if (account.currency !== 'GBP' && payrun.tier !== 'ZERO') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }, { messageId: 'preferMatch' }],
+    },
+    {
+      name: 'logical OR inside if test',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        declare const other: boolean;
+        if (s === 'failed' || other) {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'negated comparison',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        if (!(s === 'failed')) {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'variable initializer',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        const isFailed = s === 'failed';
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'return statement',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        function isFailed(s: State) { return s === 'failed'; }
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'arrow function body',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        const isFailed = (s: State) => s === 'failed';
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'function argument',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        declare function log(v: boolean): void;
+        log(s === 'failed');
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'object property value',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        const o = { failed: s === 'failed' };
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'array element',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        const a = [s === 'failed'];
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'ternary branch (not the test)',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        declare const s: State;
+        declare const flag: boolean;
+        const r = flag ? (s === 'failed') : false;
       `,
       errors: [{ messageId: 'preferMatch' }],
     },

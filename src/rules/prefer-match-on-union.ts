@@ -33,13 +33,30 @@ function getNonLiteralOperand(
   return null
 }
 
+function isInsideLoopTest(node: TSESTree.BinaryExpression): boolean {
+  let current: TSESTree.Node = node
+  let parent: TSESTree.Node | undefined = current.parent
+  while (
+    parent &&
+    (parent.type === 'LogicalExpression' || parent.type === 'UnaryExpression')
+  ) {
+    current = parent
+    parent = current.parent
+  }
+  if (!parent) return false
+  return (
+    (parent.type === 'WhileStatement' || parent.type === 'DoWhileStatement') &&
+    parent.test === current
+  )
+}
+
 export const preferMatchOnUnion = createRule<[], MessageIds>({
   name: 'prefer-match-on-union',
   meta: {
     type: 'suggestion',
     docs: {
       description:
-        "Warn when `if` or a ternary branches on a string-literal union type via `===`/`!==`. Prefer ts-pattern's `match(...).exhaustive()`.",
+        "Warn when `===`/`!==` is used against a string-literal union type. Prefer ts-pattern's `match(...).exhaustive()`.",
     },
     schema: [],
     messages: {
@@ -52,11 +69,10 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
     const services = ESLintUtils.getParserServices(context)
     const checker = services.program.getTypeChecker()
 
-    function check(test: TSESTree.Expression) {
-      if (test.type !== 'BinaryExpression') return
-      if (test.operator !== '===' && test.operator !== '!==') return
+    function check(node: TSESTree.BinaryExpression) {
+      if (node.operator !== '===' && node.operator !== '!==') return
 
-      const target = getNonLiteralOperand(test)
+      const target = getNonLiteralOperand(node)
       if (!target) return
 
       const tsNode = services.esTreeNodeToTSNodeMap.get(target)
@@ -64,15 +80,13 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
 
       if (!isStringLiteralUnion(type, checker)) return
 
-      context.report({ node: test, messageId: 'preferMatch' })
+      context.report({ node, messageId: 'preferMatch' })
     }
 
     return {
-      IfStatement(node) {
-        check(node.test)
-      },
-      ConditionalExpression(node) {
-        check(node.test)
+      BinaryExpression(node) {
+        if (isInsideLoopTest(node)) return
+        check(node)
       },
     }
   },

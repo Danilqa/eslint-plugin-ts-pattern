@@ -1,6 +1,6 @@
 {
   "name": "@danilqa/eslint-plugin-ts-pattern",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "ESLint plugin: warn when `if` is used on string-literal union types instead of ts-pattern's exhaustive `match`",
   "license": "MIT",
   "keywords": [
