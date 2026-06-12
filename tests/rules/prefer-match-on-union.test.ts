@@ -173,6 +173,57 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
         const r = a === b;
       `,
     },
+    {
+      name: 'typeof check — runtime type guard, not a domain union',
+      code: `
+        declare const v: unknown;
+        if (typeof v === 'string') {}
+      `,
+    },
+    {
+      name: 'typeof window — SSR guard must not fire',
+      code: `
+        if (typeof window === 'undefined') {}
+      `,
+    },
+    {
+      name: 'typeof with !== and literal on the LEFT',
+      code: `
+        declare const v: unknown;
+        if ('function' !== typeof v) {}
+      `,
+    },
+    {
+      name: 'union larger than default maxUnionSize (10) — impractical to match exhaustively',
+      code: `
+        type Currency = 'AED' | 'AUD' | 'CAD' | 'CHF' | 'EUR' | 'GBP' | 'JPY' | 'NOK' | 'NZD' | 'SEK' | 'USD';
+        declare const c: Currency;
+        if (c === 'GBP') {}
+      `,
+    },
+    {
+      name: 'union larger than custom maxUnionSize',
+      options: [{ maxUnionSize: 3 }],
+      code: `
+        type T = 'a' | 'b' | 'c' | 'd';
+        declare const t: T;
+        if (t === 'a') {}
+      `,
+    },
+    {
+      name: 'type predicate function declaration — the comparison is the narrowing implementation',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        function isFailed(s: State): s is 'failed' { return s === 'failed'; }
+      `,
+    },
+    {
+      name: 'type predicate arrow function',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        const isFailed = (s: State): s is 'failed' => s === 'failed';
+      `,
+    },
   ],
   invalid: [
     {
@@ -399,6 +450,53 @@ ruleTester.run('prefer-match-on-union', preferMatchOnUnion, {
         declare const s: State;
         declare const flag: boolean;
         const r = flag ? (s === 'failed') : false;
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'union exactly at default maxUnionSize (10) — boundary still fires',
+      code: `
+        type T = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j';
+        declare const t: T;
+        if (t === 'a') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'nullish members do not count toward maxUnionSize',
+      code: `
+        type T = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | null | undefined;
+        declare const t: T;
+        if (t === 'a') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'custom maxUnionSize raises the cap',
+      options: [{ maxUnionSize: 11 }],
+      code: `
+        type Currency = 'AED' | 'AUD' | 'CAD' | 'CHF' | 'EUR' | 'GBP' | 'JPY' | 'NOK' | 'NZD' | 'SEK' | 'USD';
+        declare const c: Currency;
+        if (c === 'GBP') {}
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'plain boolean-returning helper still fires — only `x is T` predicates are exempt',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        const isFailed = (s: State): boolean => s === 'failed';
+      `,
+      errors: [{ messageId: 'preferMatch' }],
+    },
+    {
+      name: 'callback nested inside a type predicate function is not exempt',
+      code: `
+        type State = 'failed' | 'success' | 'pending';
+        interface Job { state: State }
+        function hasFailed(jobs: Job[]): jobs is Job[] {
+          return jobs.some((job) => job.state === 'failed');
+        }
       `,
       errors: [{ messageId: 'preferMatch' }],
     },
