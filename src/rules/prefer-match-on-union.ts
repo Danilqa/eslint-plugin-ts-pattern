@@ -6,17 +6,30 @@ import { createRule } from '../utils/create-rule'
 
 type MessageIds = 'preferMatch'
 
+export interface Options {
+  maxUnionSize: number
+}
+
+const DEFAULT_MAX_UNION_SIZE = 10
+
 function isNullish(type: ts.Type, checker: ts.TypeChecker): boolean {
   const printed = checker.typeToString(type)
   return printed === 'null' || printed === 'undefined'
 }
 
-function isStringLiteralUnion(type: ts.Type, checker: ts.TypeChecker): boolean {
-  if (!type.isUnion()) return false
+function getStringLiteralUnionSize(
+  type: ts.Type,
+  checker: ts.TypeChecker,
+): number | null {
+  if (!type.isUnion()) return null
   const constituents = type.types
   const literals = constituents.filter((t) => t.isStringLiteral())
-  if (literals.length < 2) return false
-  return constituents.every((t) => t.isStringLiteral() || isNullish(t, checker))
+  if (literals.length < 2) return null
+  const allLiteralOrNullish = constituents.every(
+    (t) => t.isStringLiteral() || isNullish(t, checker),
+  )
+  if (!allLiteralOrNullish) return null
+  return literals.length
 }
 
 function getNonLiteralOperand(
@@ -31,6 +44,10 @@ function getNonLiteralOperand(
   if (leftIsStringLit && !rightIsStringLit) return right
   if (rightIsStringLit && !leftIsStringLit) return left
   return null
+}
+
+function isTypeofExpression(node: TSESTree.Expression): boolean {
+  return node.type === 'UnaryExpression' && node.operator === 'typeof'
 }
 
 function isInsideLoopTest(node: TSESTree.BinaryExpression): boolean {
@@ -50,7 +67,22 @@ function isInsideLoopTest(node: TSESTree.BinaryExpression): boolean {
   )
 }
 
-export const preferMatchOnUnion = createRule<[], MessageIds>({
+function isInsideTypePredicate(node: TSESTree.BinaryExpression): boolean {
+  let current: TSESTree.Node | undefined = node.parent
+  while (current) {
+    if (
+      current.type === 'FunctionDeclaration' ||
+      current.type === 'FunctionExpression' ||
+      current.type === 'ArrowFunctionExpression'
+    ) {
+      return current.returnType?.typeAnnotation.type === 'TSTypePredicate'
+    }
+    current = current.parent
+  }
+  return false
+}
+
+export const preferMatchOnUnion = createRule<[Options], MessageIds>({
   name: 'prefer-match-on-union',
   meta: {
     type: 'suggestion',
@@ -58,14 +90,27 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
       description:
         "Warn when `===`/`!==` is used against a string-literal union type. Prefer ts-pattern's `match(...).exhaustive()`.",
     },
-    schema: [],
+    schema: [
+      {
+        type: 'object',
+        properties: {
+          maxUnionSize: {
+            type: 'integer',
+            minimum: 2,
+            description:
+              'Skip unions with more string-literal members than this. Large unions (currencies, country codes, locales) are impractical to cover with an exhaustive match.',
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       preferMatch:
         'Avoid `===`/`!==` checks on string-literal union types. Use `match(value).with(...).exhaustive()` from ts-pattern so missing cases are caught at compile time. Use .otherwise() for dynamic backend types. Read more: https://github.com/Danilqa/eslint-plugin-ts-pattern',
     },
   },
-  defaultOptions: [],
-  create(context) {
+  defaultOptions: [{ maxUnionSize: DEFAULT_MAX_UNION_SIZE }],
+  create(context, [options]) {
     const services = ESLintUtils.getParserServices(context)
     const checker = services.program.getTypeChecker()
 
@@ -75,10 +120,20 @@ export const preferMatchOnUnion = createRule<[], MessageIds>({
       const target = getNonLiteralOperand(node)
       if (!target) return
 
+      // `typeof x` is typed as a string-literal union ("string" | "number" | ...),
+      // but it is a runtime type check, not a domain state to match on.
+      if (isTypeofExpression(target)) return
+
       const tsNode = services.esTreeNodeToTSNodeMap.get(target)
       const type = checker.getTypeAtLocation(tsNode)
 
-      if (!isStringLiteralUnion(type, checker)) return
+      const unionSize = getStringLiteralUnionSize(type, checker)
+      if (unionSize === null) return
+      if (unionSize > options.maxUnionSize) return
+
+      // A `x is T` predicate is itself the narrowing primitive — the comparison
+      // inside it is the implementation, and match() returns plain boolean.
+      if (isInsideTypePredicate(node)) return
 
       context.report({ node, messageId: 'preferMatch' })
     }
